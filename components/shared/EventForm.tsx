@@ -27,12 +27,19 @@ import { useState } from "react"
 import { FileUploader } from "./FileUploader"
 import Image from "next/image"
 import { Checkbox } from "../ui/checkbox";
+import { IEvent } from "@/lib/mongoDB/database/models/event.model";
+import { useUploadThing } from '@/lib/uploadthing'
+import { createEvent, updateEvent } from "@/lib/actions/event.action";
+import { useRouter } from "next/navigation";
+
  
 
 
 type EventFormProps ={
     userId:string
     type:"create" | "update" 
+    event?: IEvent,
+    eventId?: string
 }
 const initilaValues = eventDefaultValues
 
@@ -42,11 +49,41 @@ const EventForm = ({userId,type}:EventFormProps) => {
     resolver: zodResolver(EventFormSchema),
     defaultValues: initilaValues
   })
+ const router = useRouter()
+  const {startUpload } = useUploadThing('imageUploader')
  
-  function onSubmit(values: z.infer<typeof EventFormSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values)
+  async function onSubmit(values: z.infer<typeof EventFormSchema>) {
+    let uploadedImageUrl = values.imageUrl;
+
+    if(files.length > 0) {
+      const uploadedImages = await startUpload(files)
+
+      if(!uploadedImages) {
+        return
+      }
+
+      uploadedImageUrl = uploadedImages[0].url
+    }
+
+    if(type ==="create"){
+        try {
+            const newEvent =  await createEvent({
+                event:{
+                    ...values , imageUrl:uploadedImageUrl
+                },
+                userId,
+                path:'/profile'
+            })
+            if(newEvent){
+                form.reset()
+                router.push(`/events/${newEvent._id}`)
+            }
+        } catch (error) {
+            
+        }
+    }
+
+    
   }
   return (
     <Form {...form}>
