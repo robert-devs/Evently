@@ -41,9 +41,13 @@ type EventFormProps ={
     event?: IEvent,
     eventId?: string
 }
-const initilaValues = eventDefaultValues
 
-const EventForm = ({userId,type}:EventFormProps) => {
+const EventForm = ({userId,type,event,eventId}:EventFormProps) => {
+    const initilaValues = event && type ==='update' ? {
+        ...event,
+        startDateTime: new Date(event.startDateTime),
+        endDateTime: new Date(event.endDateTime)
+    } : eventDefaultValues
     const [files, setFiles] = useState<File[]>([])
     const form = useForm<z.infer<typeof EventFormSchema>>({
     resolver: zodResolver(EventFormSchema),
@@ -81,6 +85,28 @@ const EventForm = ({userId,type}:EventFormProps) => {
         } catch (error) {
             
         }
+    }
+
+    if(type === 'update') {
+      if(!eventId) {
+        router.back()
+        return;
+      }
+
+      try {
+        const updatedEvent = await updateEvent({
+          userId,
+          event: { ...values, imageUrl: uploadedImageUrl, _id: eventId },
+          path: `/events/${eventId}`
+        })
+
+        if(updatedEvent) {
+          form.reset();
+          router.push(`/events/${updatedEvent._id}`)
+        }
+      } catch (error) {
+        console.log(error);
+      }
     }
 
     
